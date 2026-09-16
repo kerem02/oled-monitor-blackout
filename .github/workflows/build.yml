@@ -1,0 +1,48 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Stage portable app
+        run: cmake --install build --config Release --prefix dist
+      - name: Add executable checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/OLEDBlackout.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  OLEDBlackout.exe" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLED-Blackout-2.1.0-win-x64-ci
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  portable-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with sanitizers
+        run: >-
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

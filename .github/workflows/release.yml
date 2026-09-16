@@ -1,0 +1,72 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tag and project version
+        shell: pwsh
+        run: |
+          $tagVersion = $env:GITHUB_REF_NAME -replace '^v', ''
+          if ($tagVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Expected a semantic version tag such as v2.1.0; got $env:GITHUB_REF_NAME"
+          }
+          $cmake = Get-Content CMakeLists.txt -Raw
+          $match = [regex]::Match($cmake, 'project\(OLEDBlackout VERSION (\d+\.\d+\.\d+)')
+          if (-not $match.Success -or $match.Groups[1].Value -ne $tagVersion) {
+            throw "Tag version $tagVersion does not match CMake project version"
+          }
+          "VERSION=$tagVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test exact tagged source
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package portable release
+        shell: pwsh
+        run: |
+          $folderName = "OLED-Blackout-$env:VERSION"
+          $packageName = "$folderName-win-x64"
+          $packageRoot = Join-Path release $folderName
+          New-Item -ItemType Directory -Force release | Out-Null
+          cmake --install build --config Release --prefix $packageRoot
+          if ($LASTEXITCODE) { throw 'Install staging failed' }
+
+          $exeHash = (Get-FileHash (Join-Path $packageRoot 'OLEDBlackout.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$exeHash  OLEDBlackout.exe" | Set-Content (Join-Path $packageRoot 'SHA256SUMS.txt') -Encoding ascii
+
+          $archive = Join-Path release "$packageName.zip"
+          Compress-Archive -Path $packageRoot -DestinationPath $archive -CompressionLevel Optimal
+          $archiveHash = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$archiveHash  $packageName.zip" | Set-Content "$archive.sha256" -Encoding ascii
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLED-Blackout-${{ github.ref_name }}-release
+          path: release/*.zip*
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            "release/OLED-Blackout-$env:VERSION-win-x64.zip" `
+            "release/OLED-Blackout-$env:VERSION-win-x64.zip.sha256" `
+            --verify-tag `
+            --title "OLED Blackout $env:VERSION" `
+            --notes-file RELEASE_NOTES.md
