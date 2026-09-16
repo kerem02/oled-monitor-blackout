@@ -49,6 +49,17 @@ void transitions() {
     m.reset(); in.nowMs = 99999; CHECK(m.step(in) == State::Waiting);
     in.bounds = {}; CHECK(m.step(in) == State::Unavailable);
 }
+void displayPowerTransitions() {
+    using T = DisplayPowerTransition;
+    CHECK(displayPowerTransition(false,0) == T::BecameOff);
+    CHECK(displayPowerTransition(true,0) == T::None);
+    CHECK(displayPowerTransition(true,1) == T::BecameOn);
+    CHECK(displayPowerTransition(true,2) == T::BecameOn);
+    CHECK(displayPowerTransition(false,1) == T::None);
+    CHECK(displayPowerTransition(false,2) == T::None);
+    CHECK(displayPowerTransition(false,3) == T::None);
+    CHECK(displayPowerTransition(true,99) == T::None);
+}
 void timeEdges() {
     auto in = ready(); in.cursor = {100,100}; StateMachine m;
     in.nowMs = 0xFFFFFFFFull - 1000; CHECK(m.step(in) == State::Waiting);
@@ -191,7 +202,8 @@ void safetyProperties() {
 }
 int main() {
     const std::pair<const char*,std::function<void()>> tests[] = {
-        {"geometry",geometry},{"state transitions",transitions},{"monotonic time edges",timeEdges},
+        {"geometry",geometry},{"state transitions",transitions},{"display power transitions",displayPowerTransitions},
+        {"monotonic time edges",timeEdges},
         {"identity reorder/ambiguity",identities},{"configuration",configuration},{"startup command/state",startupLogic},
         {"unsaved selection refresh",selectionRefresh},{"keyboard selection",keyboardSelection},{"extreme signed geometry",geometryExtremes},
         {"polling and activation policies",integrationPolicies},{"randomized safety properties",safetyProperties}};

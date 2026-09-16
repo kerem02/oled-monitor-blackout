@@ -18,10 +18,10 @@ private:
     INT_PTR dialogMessage(HWND, UINT, WPARAM, LPARAM);
     void initialize();
     void tick();
-    void reset();
-    void scheduleRefresh();
+    void reset(const char* reason = "state reset");
+    void scheduleRefresh(const char* reason);
     void refreshDisplays();
-    void setOverlay(bool visible);
+    void setOverlay(bool visible, const char* hideReason = nullptr);
     void clearIdentify() noexcept;
     void identify();
     void updateTray(bool add = false);

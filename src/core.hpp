@@ -28,6 +28,8 @@ struct Rect {
 };
 enum class State { Disabled, Unavailable, Paused, OnDisplay, Waiting, BlackedOut };
 const char* stateName(State s) noexcept;
+enum class DisplayPowerTransition { None, BecameOff, BecameOn };
+DisplayPowerTransition displayPowerTransition(bool wasOff, unsigned reportedState) noexcept;
 struct Input {
     bool enabled{true}, available{}, paused{}, cursorValid{};
     Rect bounds{};
