@@ -52,7 +52,7 @@ App::~App() {
     log_.write("Shutdown");
 }
 void App::initialize() {
-    log_.write("Startup v2.1.0");
+    log_.write("Startup v2.1.1");
     auto parsed = store_.load(); settings_ = std::move(parsed.settings);
     WNDCLASSEXW klass{}; klass.cbSize = sizeof(klass); klass.hInstance = instance_;
     klass.lpfnWndProc = windowProc; klass.lpszClassName = ControllerClass;
@@ -364,7 +364,7 @@ void App::menu(POINT point) {
     }
     else if (command == 5) scheduleRefresh("manual display refresh");
     else if (command == 6) {
-        MessageBoxW(window_, L"OLED Blackout 2.1.0\nNative Windows utility - MIT License\nCopyright (c) 2026 Kerem Albayrak\n\n"
+        MessageBoxW(window_, L"OLED Blackout 2.1.1\nNative Windows utility - MIT License\nCopyright (c) 2026 Kerem Albayrak\n\n"
             L"Ctrl+Alt+B toggles blackout.\nNo injection, input hooks, telemetry or network access.\n"
             L"Compatibility with every anti-cheat product cannot be guaranteed.\n\n"
             L"Settings and bounded logs: %LocalAppData%\\OLED Blackout", L"About OLED Blackout", MB_OK | MB_ICONINFORMATION);

@@ -1,26 +1,27 @@
-# Validation — OLED Blackout 2.1.0
+# Validation — OLED Blackout 2.1.1
 
 This document separates executed checks from planned coverage. A successful build or unit test is not presented as proof of every physical display, accessibility or gaming scenario.
 
 ## Executed checks
 
-### Native Windows — 2026-09-16
+### Native Windows — 2026-09-16 and 2026-09-17
 
-The supplied 2.1.0 pre-release package was run on a native Windows dual-monitor system.
+The 2.1.0 pre-release package was run on a native Windows dual-monitor system. The 2.1.1 release candidate was then tested on the affected setup after the intermittent-dismissal fix.
 
 | Check | Result |
 | --- | --- |
-| `verification\oled_core_tests.exe` | PASS — 96,613 assertions |
+| Core test suite | PASS — 96,621 assertions in Windows CI, including display-power regression coverage |
 | `verification\oled_platform_tests.exe` | PASS — 48 assertions |
 | Application launch and native Settings UI | PASS — user-confirmed |
 | Two-display discovery and selection | PASS — 2560 x 1440 displays at reported 360 Hz and 165 Hz |
 | Functional blackout behavior | PASS — user-confirmed smoke test |
+| Blackout remains active while pointer stays away | PASS — user-confirmed with the 2.1.1 release candidate |
 
 The exact Windows build, GPU/driver, DPI scale, HDR state and detailed timing measurements were not recorded. The captured Settings UI is available at [`assets/settings.png`](assets/settings.png).
 
 ### Independent portable checks — 2026-09-16
 
-The final portable core source was built and run on Linux in both normal and AddressSanitizer/UndefinedBehaviorSanitizer configurations. The same 96,613 assertions passed. The final pre-release PE was also checked as x64 GUI, for system-only imported DLLs and for ASLR, NX and high-entropy address-space flags.
+The 2.1.1 portable core source was built and run with AddressSanitizer/UndefinedBehaviorSanitizer; all 96,621 assertions passed. The earlier pre-release PE was also checked as x64 GUI, for system-only imported DLLs and for ASLR, NX and high-entropy address-space flags.
 
 ### Tagged release CI
 
