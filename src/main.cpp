@@ -25,7 +25,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
         if (error == ERROR_ALREADY_EXISTS) {
             if (commandLine && std::wstring(commandLine) == L"--startup") return 0;
             if (!oled::activateExistingInstance()) {
-                const char* message = "OLED Blackout is already running, but Settings could not be opened. Use its tray icon. If an older version is running, exit it before starting 2.1.0.";
+                const char* message = "OLED Blackout is already running, but Settings could not be opened. Use its tray icon. If an older version is running, exit it before starting 2.1.1.";
                 OutputDebugStringA(message);
                 oled::showError(nullptr, message, L"OLED Blackout is already running");
                 return 1;

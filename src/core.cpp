@@ -16,6 +16,14 @@ const char* stateName(State s) noexcept {
     }
     return "Unknown";
 }
+DisplayPowerTransition displayPowerTransition(bool wasOff, unsigned reportedState) noexcept {
+    // GUID_CONSOLE_DISPLAY_STATE reports 0=off, 1=on and 2=dimmed. Repeated
+    // notifications and on<->dimmed changes are not topology changes.
+    if (reportedState > 2) return DisplayPowerTransition::None;
+    const bool isOff = reportedState == 0;
+    if (isOff == wasOff) return DisplayPowerTransition::None;
+    return isOff ? DisplayPowerTransition::BecameOff : DisplayPowerTransition::BecameOn;
+}
 State StateMachine::step(const Input& in) noexcept {
     State next;
     if (!in.enabled) next = State::Disabled;

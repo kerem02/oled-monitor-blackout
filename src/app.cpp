@@ -52,7 +52,7 @@ App::~App() {
     log_.write("Shutdown");
 }
 void App::initialize() {
-    log_.write("Startup v2.1.0");
+    log_.write("Startup v2.1.1");
     auto parsed = store_.load(); settings_ = std::move(parsed.settings);
     WNDCLASSEXW klass{}; klass.cbSize = sizeof(klass); klass.hInstance = instance_;
     klass.lpfnWndProc = windowProc; klass.lpszClassName = ControllerClass;
@@ -109,15 +109,15 @@ void App::emergencyHide() noexcept {
     for (HWND card : identifyWindows_) ShowWindow(card, SW_HIDE);
     overlayVisible_ = false;
 }
-void App::reset() { setOverlay(false); clearIdentify(); machine_.reset(); }
-void App::scheduleRefresh() {
+void App::reset(const char* reason) { setOverlay(false, reason); clearIdentify(); machine_.reset(); }
+void App::scheduleRefresh(const char* reason) {
     ++topologyGeneration_;
-    reset(); clearIdentify(); selected_.reset(); topologyPending_ = true;
+    reset(reason); selected_.reset(); topologyPending_ = true;
     refreshAt_ = GetTickCount64() + 300;
 }
 void App::refreshDisplays() {
     const auto generation = ++topologyGeneration_;
-    reset(); selected_.reset(); topologyPending_ = false;
+    reset("display snapshot refresh"); selected_.reset(); topologyPending_ = false;
     try {
         auto discovered = enumerateDisplays();
         if (generation != topologyGeneration_ || topologyPending_) return;
@@ -158,7 +158,7 @@ void App::tick() {
     const bool blocked = suspended_ || locked_ || displayOff_ || endingSession_ || !trayAdded_;
     if (!blocked && ((topologyPending_ && now >= refreshAt_) ||
         (!topologyPending_ && !selected_ && !settings_.monitorPath.empty() && now >= retryAt_))) refreshDisplays();
-    if (selected_ && !selectedHealthy()) scheduleRefresh();
+    if (selected_ && !selectedHealthy()) scheduleRefresh("selected display health check failed");
     POINT cursor{};
     Input input;
     input.enabled = settings_.enabled;
@@ -185,7 +185,7 @@ void App::tick() {
         } catch (const std::exception& e) {
             log_.write(std::string("Pre-blackout verification failed: ") + e.what());
         }
-        if (!verified) { scheduleRefresh(); next = State::Paused; }
+        if (!verified) { scheduleRefresh("pre-blackout display verification failed"); next = State::Paused; }
         else {
             input.enabled = settings_.enabled;
             input.available = selected_.has_value() && !topologyPending_;
@@ -196,8 +196,24 @@ void App::tick() {
             next = machine_.step(input);
         }
     }
-    setOverlay(next == State::BlackedOut);
-    if (topologyPending_) { emergencyHide(); machine_.reset(); next = State::Paused; }
+    const char* hideReason = nullptr;
+    if (next != State::BlackedOut) {
+        if (!settings_.enabled) hideReason = "automatic blackout disabled";
+        else if (!selected_ || topologyPending_) hideReason = "selected display unavailable or refresh pending";
+        else if (suspended_) hideReason = "system suspended";
+        else if (locked_) hideReason = "session locked or disconnected";
+        else if (displayOff_) hideReason = "console display powered off";
+        else if (endingSession_) hideReason = "session ending";
+        else if (!trayAdded_) hideReason = "tray icon unavailable";
+        else if (uiDepth_ > 0) hideReason = "application dialog active";
+        else if (menuOpen_) hideReason = "tray menu open";
+        else if (!identifyWindows_.empty()) hideReason = "monitor identification active";
+        else if (!input.cursorValid) hideReason = "cursor position unavailable";
+        else if (input.bounds.contains(input.cursor)) hideReason = "cursor entered selected display";
+        else hideReason = "state machine left blackout";
+    }
+    setOverlay(next == State::BlackedOut, hideReason);
+    if (topologyPending_) { setOverlay(false, "display refresh pending"); machine_.reset(); next = State::Paused; }
     const unsigned interval = pollInterval(next,blocked);
     if (interval != pollMs_) {
         if (!SetTimer(window_, PollTimer, interval, nullptr)) winError("Change polling timer");
@@ -205,10 +221,12 @@ void App::tick() {
     }
     if (next != reportedState_) { reportedState_ = next; updateTray(); updateSettingsStatus(); }
 }
-void App::setOverlay(bool visible) {
+void App::setOverlay(bool visible, const char* hideReason) {
     if (visible == overlayVisible_) return;
     if (!visible) {
-        emergencyHide(); log_.write("Blackout hidden"); return;
+        emergencyHide();
+        log_.write(std::string("Blackout hidden: ") + (hideReason ? hideReason : "unspecified state change"));
+        return;
     }
     if (!selected_ || topologyPending_) return;
     const auto generation = topologyGeneration_;
@@ -217,7 +235,9 @@ void App::setOverlay(bool visible) {
         SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_SHOWWINDOW)) winError("Show blackout");
     overlayVisible_ = true;
     if (generation != topologyGeneration_ || topologyPending_ || !settings_.enabled || suspended_ || locked_ ||
-        displayOff_ || endingSession_ || !trayAdded_) { emergencyHide(); machine_.reset(); return; }
+        displayOff_ || endingSession_ || !trayAdded_) {
+        setOverlay(false, "post-show safety validation failed"); machine_.reset(); return;
+    }
     log_.write("Blackout shown");
 }
 std::wstring App::statusText() const {
@@ -247,7 +267,7 @@ void App::updateTray(bool add) {
     } else {
         if (!trayRetryAt_) log_.write("Tray unavailable; blackout paused, retrying automatically");
         trayAdded_ = false; trayRetryAt_ = GetTickCount64() + 2000;
-        emergencyHide(); machine_.reset();
+        reset("tray icon unavailable");
     }
 }
 void App::notify(const std::wstring& text, bool warning) {
@@ -267,7 +287,7 @@ void App::registerHotkey() {
 }
 void App::applySettings(Settings settings, bool persist) {
     // Always remove blackout first, including if persistence subsequently fails.
-    reset();
+    reset("settings changed");
     settings_ = std::move(settings);
     registerHotkey(); refreshDisplays(); tick(); updateTray();
     try { if (persist) store_.save(settings_); }
@@ -279,7 +299,7 @@ void App::clearIdentify() noexcept {
     identifyWindows_.clear();
 }
 void App::identify() {
-    clearIdentify(); reset();
+    clearIdentify(); reset("monitor identification opened");
     for (std::size_t i = 0; i < displays_.size(); ++i) {
         const auto bounds = displays_[i].bounds;
         const int width = std::min(240, bounds.width());
@@ -299,7 +319,7 @@ void App::identify() {
 void App::menu(POINT point) {
     if (menuOpen_) return;
     const auto statusBeforeMenu = statusText();
-    menuOpen_ = true; reset();
+    menuOpen_ = true; reset("tray menu opened");
     struct Done { App& a; ~Done() { a.menuOpen_ = false; a.machine_.reset(); } } done{*this};
     MenuHandle root, delay, monitors;
     item(root.value, MF_GRAYED, 0, statusBeforeMenu);
@@ -342,9 +362,9 @@ void App::menu(POINT point) {
         if (current.state == StartupState::Stale || current.state == StartupState::Unreadable) settingsDialog();
         else { currentUserStartup().set(current.state != StartupState::Current); log_.write("Windows startup preference changed"); }
     }
-    else if (command == 5) scheduleRefresh();
+    else if (command == 5) scheduleRefresh("manual display refresh");
     else if (command == 6) {
-        MessageBoxW(window_, L"OLED Blackout 2.1.0\nNative Windows utility - MIT License\nCopyright (c) 2026 Kerem Albayrak\n\n"
+        MessageBoxW(window_, L"OLED Blackout 2.1.1\nNative Windows utility - MIT License\nCopyright (c) 2026 Kerem Albayrak\n\n"
             L"Ctrl+Alt+B toggles blackout.\nNo injection, input hooks, telemetry or network access.\n"
             L"Compatibility with every anti-cheat product cannot be guaranteed.\n\n"
             L"Settings and bounded logs: %LocalAppData%\\OLED Blackout", L"About OLED Blackout", MB_OK | MB_ICONINFORMATION);
@@ -370,7 +390,9 @@ void App::fatal(const char* message) noexcept {
     showError(nullptr, message, L"OLED Blackout stopped safely");
 }
 LRESULT App::message(UINT msg, WPARAM wp, LPARAM lp) {
-    if (taskbarCreated_ && msg == taskbarCreated_) { reset(); trayAdded_ = false; updateTray(true); return 0; }
+    if (taskbarCreated_ && msg == taskbarCreated_) {
+        reset("Explorer taskbar recreated"); trayAdded_ = false; updateTray(true); return 0;
+    }
     if (activationMessage_ && msg == activationMessage_) {
         if (!ready_ || !validActivation(wp,static_cast<std::uint64_t>(lp)) || !isActivationTarget(window_)) return 0;
         if (wp == ActivationShow && !activationQueued_) {
@@ -410,31 +432,49 @@ LRESULT App::message(UINT msg, WPARAM wp, LPARAM lp) {
     }
     case RefreshMessage:
     case WM_DISPLAYCHANGE:
-        log_.write("Display topology changed"); scheduleRefresh(); return 0;
+        log_.write("Display topology changed"); scheduleRefresh("display topology notification"); return 0;
     case WM_SETTINGCHANGE:
-        scheduleRefresh(); return 0;
+        // This broadcast covers many unrelated user-preference changes and is
+        // commonly sent in the background. Display topology has dedicated
+        // WM_DISPLAYCHANGE/WM_DEVICECHANGE notifications; do not blink an
+        // active blackout for an unrelated setting update.
+        return 0;
     case WM_DEVICECHANGE:
-        if (wp == DBT_DEVNODES_CHANGED || wp == DBT_DEVICEARRIVAL || wp == DBT_DEVICEREMOVECOMPLETE) scheduleRefresh();
+        if (wp == DBT_DEVNODES_CHANGED || wp == DBT_DEVICEARRIVAL || wp == DBT_DEVICEREMOVECOMPLETE)
+            scheduleRefresh("display device notification");
         return TRUE;
     case WM_POWERBROADCAST:
-        if (wp == PBT_APMSUSPEND) { suspended_ = true; reset(); }
+        if (wp == PBT_APMSUSPEND) { suspended_ = true; reset("system suspending"); }
         else if (wp == PBT_APMRESUMEAUTOMATIC || wp == PBT_APMRESUMESUSPEND) {
-            suspended_ = false; displayOff_ = false; log_.write("Resume"); scheduleRefresh();
+            suspended_ = false; displayOff_ = false; log_.write("Resume"); scheduleRefresh("system resume");
         } else if (wp == PBT_POWERSETTINGCHANGE && lp) {
             const auto* power = reinterpret_cast<const POWERBROADCAST_SETTING*>(lp);
             if (IsEqualGUID(power->PowerSetting, ConsoleDisplayState) && power->DataLength == sizeof(DWORD)) {
                 DWORD state{}; CopyMemory(&state, power->Data, sizeof(state));
-                displayOff_ = state == 0;
-                if (displayOff_) reset(); else scheduleRefresh();
+                const auto transition = displayPowerTransition(displayOff_, state);
+                if (transition == DisplayPowerTransition::BecameOff) {
+                    displayOff_ = true;
+                    reset("console display powered off");
+                } else if (transition == DisplayPowerTransition::BecameOn) {
+                    displayOff_ = false;
+                    scheduleRefresh("console display powered on");
+                }
             }
         }
         return TRUE;
     case WM_WTSSESSION_CHANGE:
-        if (wp == WTS_SESSION_LOCK || wp == WTS_CONSOLE_DISCONNECT || wp == WTS_REMOTE_DISCONNECT) { locked_ = true; reset(); }
-        else if (wp == WTS_SESSION_UNLOCK || wp == WTS_CONSOLE_CONNECT || wp == WTS_REMOTE_CONNECT) { locked_ = false; scheduleRefresh(); }
+        if (wp == WTS_SESSION_LOCK || wp == WTS_CONSOLE_DISCONNECT || wp == WTS_REMOTE_DISCONNECT) {
+            locked_ = true; reset("session locked or disconnected");
+        }
+        else if (wp == WTS_SESSION_UNLOCK || wp == WTS_CONSOLE_CONNECT || wp == WTS_REMOTE_CONNECT) {
+            locked_ = false; scheduleRefresh("session unlocked or connected");
+        }
         return 0;
-    case WM_QUERYENDSESSION: endingSession_=true; reset(); clearIdentify(); return TRUE;
-    case WM_ENDSESSION: endingSession_=wp != 0; reset(); if (wp) { if (dialog_) EndDialog(dialog_,IDCANCEL); PostQuitMessage(0); } return 0;
+    case WM_QUERYENDSESSION: endingSession_=true; reset("session ending"); clearIdentify(); return TRUE;
+    case WM_ENDSESSION:
+        endingSession_=wp != 0; reset(wp ? "session ended" : "session end cancelled");
+        if (wp) { if (dialog_) EndDialog(dialog_,IDCANCEL); PostQuitMessage(0); }
+        return 0;
     case WM_CLOSE: emergencyHide(); if (dialog_) EndDialog(dialog_, IDCANCEL); PostQuitMessage(0); return 0;
     }
     return DefWindowProcW(window_, msg, wp, lp);
@@ -470,9 +510,9 @@ LRESULT CALLBACK App::overlayProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) noe
     case WM_NCHITTEST: return HTTRANSPARENT;
     case WM_ERASEBKGND: return 1;
     case WM_DPICHANGED:
-        // Exact monitor pixels are restored by the controller, not Windows' suggested work-area rect.
-        // Identification windows do not drive topology recovery.
-        if (!GetWindowLongPtrW(hwnd, GWLP_USERDATA)) PostMessageW(GetWindow(hwnd, GW_OWNER), RefreshMessage, 0, 0);
+        // Ignore the suggested logical rect. The controller already positions
+        // this window from physical monitor bounds. Moving/showing the overlay
+        // across mixed-DPI displays must not reset an active blackout.
         return 0;
     case WM_PAINT: {
         PAINTSTRUCT ps{}; HDC dc = BeginPaint(hwnd, &ps);

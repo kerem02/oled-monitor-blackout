@@ -23,7 +23,7 @@ The display remains connected, so Windows does not rearrange your desktop. The a
 ## Download and run
 
 1. Open [Releases](https://github.com/kerem02/oled-monitor-blackout/releases/latest).
-2. Download `OLED-Blackout-2.1.0-win-x64.zip` and extract it to a permanent folder.
+2. Download `OLED-Blackout-2.1.1-win-x64.zip` and extract it to a permanent folder.
 3. Run `OLEDBlackout.exe`.
 4. In Settings, use **Identify monitors**, select the OLED, choose a delay and click **Save**.
 
@@ -61,11 +61,12 @@ There is no telemetry, analytics, updater or remote service. Continuous pointer 
 
 ## Validation
 
-The 2.1.0 pre-release package passed these native Windows checks on 2026-09-16:
+The 2.1.1 release candidate passed these checks on 2026-09-17:
 
-- 96,613 core assertions;
+- 96,621 core assertions, including repeated display-power notification regression coverage;
 - 48 Windows platform assertions;
-- dual-monitor launch, display discovery/selection and functional blackout smoke test.
+- Windows CI build and tests;
+- dual-monitor functional confirmation that blackout remains active while the pointer stays away.
 
 GitHub Actions builds and executes both test suites again from the tagged source before publishing a release. Portable Linux tests also run with AddressSanitizer and UndefinedBehaviorSanitizer. See [validation details](docs/VALIDATION.md) and the still-open [manual QA matrix](docs/MANUAL-QA.md). These results do not claim certification for every monitor, GPU, DPI layout or game.
 

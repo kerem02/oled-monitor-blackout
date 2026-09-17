@@ -1,10 +1,12 @@
-# Manual QA — 2.1.0
+# Manual QA — 2.1.1
 
 Unchecked items are still open coverage, not implied passes. Record OS build, GPU/driver, connection/dock, monitor model, resolution, refresh, DPI, HDR and EXE SHA-256 for each future run.
 
 ## Recorded native result
 
 On 2026-09-16, the 2.1.0 pre-release build was exercised on a native Windows dual-monitor system. Both supplied verification programs passed (96,613 core assertions and 48 platform assertions), and the user reported successful application launch, monitor discovery/selection and blackout behavior. The Settings window displayed 2560 x 1440 monitors at 360 Hz and 165 Hz without visible layout clipping; the captured UI is in `assets/settings.png`.
+
+On 2026-09-17, the 2.1.1 release candidate was tested on the setup that had intermittently dismissed blackout while the pointer remained on the other display. The user confirmed that the problem no longer reproduced. CI passed the expanded 96,621-assertion core suite and the 48-assertion Windows platform suite.
 
 The exact Windows build number, GPU/driver, DPI values, HDR state, game/anti-cheat session and resource measurements were not recorded. Accordingly, only the checks explicitly described above are treated as passed; the remaining matrix below stays open.
 

@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $project = Split-Path $PSScriptRoot -Parent
-$version = '2.1.0'
+$version = '2.1.1'
 $buildDirectory = Join-Path $project 'build-msvc'
 $releaseDirectory = Join-Path $project 'release'
 $packageName = "OLED-Blackout-$version-win-x64"

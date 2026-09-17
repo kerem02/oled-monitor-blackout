@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.1 — 2026-09-17
+
+Maintenance release for an intermittent blackout dismissal observed during normal use.
+
+- Ignore broad `WM_SETTINGCHANGE` broadcasts that do not establish a display-topology change.
+- Treat repeated on/dimmed display-power notifications as steady state; reset blackout only on an actual off/on transition.
+- Handle overlay `WM_DPICHANGED` locally instead of rebuilding topology and hiding the overlay.
+- Log every overlay dismissal with its exact reason to make any future recurrence diagnosable.
+- Add display-power transition regression coverage; 96,621 core assertions and 48 Windows platform assertions pass in CI.
+- Confirm the fix on the affected dual-monitor system: blackout remains active while the pointer stays away.
+
 ## 2.1.0 — 2026-09-16
 
 First stable native C++17/Win32 release. It replaces the AutoHotkey implementation with a standalone, unsigned Windows x64 application.

@@ -1,4 +1,4 @@
-# Architecture — 2.1.0
+# Architecture — 2.1.1
 
 Priority: correctness, stability, game compatibility, resources, usability, then code size.
 
