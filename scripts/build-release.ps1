@@ -1,6 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $project = Split-Path $PSScriptRoot -Parent
-$version = '2.1.1'
+$cmake = Get-Content (Join-Path $project 'CMakeLists.txt') -Raw
+$versionMatch = [regex]::Match($cmake, 'project\(OLEDBlackout VERSION (\d+\.\d+\.\d+)')
+if (-not $versionMatch.Success) { throw 'Could not read the project version from CMakeLists.txt' }
+$version = $versionMatch.Groups[1].Value
 $buildDirectory = Join-Path $project 'build-msvc'
 $releaseDirectory = Join-Path $project 'release'
 $packageName = "OLED-Blackout-$version-win-x64"

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Updated repository wording after the 2.1.1 release and removed stale release-candidate language.
+- Release scripts and CI artifact names now read the project version from CMake instead of duplicating it manually.
+
 ## 2.1.1 — 2026-09-17
 
 Maintenance release for an intermittent blackout dismissal observed during normal use.

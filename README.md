@@ -17,7 +17,7 @@ The display remains connected, so Windows does not rearrange your desktop. The a
 - 5–3600 second delay, plus 10/30/60/120 second presets.
 - Optional `Ctrl+Alt+B` toggle using the standard `RegisterHotKey` API.
 - Native tray and Settings UI, monitor identification and per-user Windows startup.
-- No administrator access, installer, AutoHotkey, .NET runtime, telemetry or network connection.
+- No administrator access, installer, external runtime, telemetry or network connection.
 - Portable x64 executable built with C++17 and documented Win32 APIs.
 
 ## Download and run
@@ -61,7 +61,7 @@ There is no telemetry, analytics, updater or remote service. Continuous pointer 
 
 ## Validation
 
-The 2.1.1 release candidate passed these checks on 2026-09-17:
+The 2.1.1 release passed these checks on 2026-09-17:
 
 - 96,621 core assertions, including repeated display-power notification regression coverage;
 - 48 Windows platform assertions;
