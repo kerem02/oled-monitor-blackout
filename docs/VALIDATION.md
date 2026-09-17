@@ -6,7 +6,7 @@ This document separates executed checks from planned coverage. A successful buil
 
 ### Native Windows — 2026-09-16 and 2026-09-17
 
-The 2.1.0 pre-release package was run on a native Windows dual-monitor system. The 2.1.1 release candidate was then tested on the affected setup after the intermittent-dismissal fix.
+The 2.1.0 pre-release package was run on a native Windows dual-monitor system. The released 2.1.1 build was then tested on the affected setup after the intermittent-dismissal fix.
 
 | Check | Result |
 | --- | --- |
@@ -15,7 +15,7 @@ The 2.1.0 pre-release package was run on a native Windows dual-monitor system. T
 | Application launch and native Settings UI | PASS — user-confirmed |
 | Two-display discovery and selection | PASS — 2560 x 1440 displays at reported 360 Hz and 165 Hz |
 | Functional blackout behavior | PASS — user-confirmed smoke test |
-| Blackout remains active while pointer stays away | PASS — user-confirmed with the 2.1.1 release candidate |
+| Blackout remains active while pointer stays away | PASS — user-confirmed with the 2.1.1 release build |
 
 The exact Windows build, GPU/driver, DPI scale, HDR state and detailed timing measurements were not recorded. The captured Settings UI is available at [`assets/settings.png`](assets/settings.png).
 
