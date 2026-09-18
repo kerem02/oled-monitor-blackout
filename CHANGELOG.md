@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## 2.1.2 — 2026-09-18
 
+Maintenance release for a second, log-confirmed intermittent blackout dismissal source.
+
+- Fixed active blackout being dismissed by unrelated Windows Plug and Play
+  device notifications (`DBT_DEVNODES_CHANGED`). Display safety remains covered
+  by `WM_DISPLAYCHANGE`, continuous selected-monitor health checks and reconnect
+  retries.
 - Updated repository wording after the 2.1.1 release and removed stale release-candidate language.
 - Release scripts and CI artifact names now read the project version from CMake instead of duplicating it manually.
 

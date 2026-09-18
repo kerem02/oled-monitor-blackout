@@ -1,12 +1,14 @@
-# Validation — OLED Blackout 2.1.1
+# Validation — OLED Blackout 2.1.2
 
 This document separates executed checks from planned coverage. A successful build or unit test is not presented as proof of every physical display, accessibility or gaming scenario.
 
 ## Executed checks
 
-### Native Windows — 2026-09-16 and 2026-09-17
+### Native Windows — 2026-09-16 through 2026-09-18
 
 The 2.1.0 pre-release package was run on a native Windows dual-monitor system. The released 2.1.1 build was then tested on the affected setup after the intermittent-dismissal fix.
+
+On 2026-09-18, the exact log reason `display device notification` established that a generic Plug and Play broadcast still dismissed blackout. Version 2.1.2 ignores that unfiltered signal and continues to use `WM_DISPLAYCHANGE`, selected-monitor health checks and reconnect retries. Automated CI covers the build and existing suites; the new non-display-device hardware scenario remains explicitly open in the manual QA matrix.
 
 | Check | Result |
 | --- | --- |
@@ -19,9 +21,9 @@ The 2.1.0 pre-release package was run on a native Windows dual-monitor system. T
 
 The exact Windows build, GPU/driver, DPI scale, HDR state and detailed timing measurements were not recorded. The captured Settings UI is available at [`assets/settings.png`](assets/settings.png).
 
-### Independent portable checks — 2026-09-16
+### Independent portable checks — 2026-09-18
 
-The 2.1.1 portable core source was built and run with AddressSanitizer/UndefinedBehaviorSanitizer; all 96,621 assertions passed. The earlier pre-release PE was also checked as x64 GUI, for system-only imported DLLs and for ASLR, NX and high-entropy address-space flags.
+The 2.1.2 portable core source was built and run with AddressSanitizer/UndefinedBehaviorSanitizer; all 96,621 assertions passed. The earlier pre-release PE was also checked as x64 GUI, for system-only imported DLLs and for ASLR, NX and high-entropy address-space flags.
 
 ### Tagged release CI
 

@@ -2,7 +2,6 @@
 #include "instance.hpp"
 #include "../resources/resource.h"
 #include <commctrl.h>
-#include <dbt.h>
 #include <algorithm>
 #include <cstdio>
 
@@ -52,7 +51,7 @@ App::~App() {
     log_.write("Shutdown");
 }
 void App::initialize() {
-    log_.write("Startup v2.1.1");
+    log_.write("Startup v2.1.2");
     auto parsed = store_.load(); settings_ = std::move(parsed.settings);
     WNDCLASSEXW klass{}; klass.cbSize = sizeof(klass); klass.hInstance = instance_;
     klass.lpfnWndProc = windowProc; klass.lpszClassName = ControllerClass;
@@ -364,7 +363,7 @@ void App::menu(POINT point) {
     }
     else if (command == 5) scheduleRefresh("manual display refresh");
     else if (command == 6) {
-        MessageBoxW(window_, L"OLED Blackout 2.1.1\nNative Windows utility - MIT License\nCopyright (c) 2026 Kerem Albayrak\n\n"
+        MessageBoxW(window_, L"OLED Blackout 2.1.2\nNative Windows utility - MIT License\nCopyright (c) 2026 Kerem Albayrak\n\n"
             L"Ctrl+Alt+B toggles blackout.\nNo injection, input hooks, telemetry or network access.\n"
             L"Compatibility with every anti-cheat product cannot be guaranteed.\n\n"
             L"Settings and bounded logs: %LocalAppData%\\OLED Blackout", L"About OLED Blackout", MB_OK | MB_ICONINFORMATION);
@@ -435,13 +434,19 @@ LRESULT App::message(UINT msg, WPARAM wp, LPARAM lp) {
         log_.write("Display topology changed"); scheduleRefresh("display topology notification"); return 0;
     case WM_SETTINGCHANGE:
         // This broadcast covers many unrelated user-preference changes and is
-        // commonly sent in the background. Display topology has dedicated
-        // WM_DISPLAYCHANGE/WM_DEVICECHANGE notifications; do not blink an
-        // active blackout for an unrelated setting update.
+        // commonly sent in the background. Display topology has a dedicated
+        // WM_DISPLAYCHANGE notification; do not blink an active blackout for
+        // an unrelated setting update.
         return 0;
     case WM_DEVICECHANGE:
-        if (wp == DBT_DEVNODES_CHANGED || wp == DBT_DEVICEARRIVAL || wp == DBT_DEVICEREMOVECOMPLETE)
-            scheduleRefresh("display device notification");
+        // A top-level window receives unfiltered Plug and Play notifications.
+        // In particular, DBT_DEVNODES_CHANGED can describe USB, audio,
+        // Bluetooth, storage, or any other device -- it is not evidence that
+        // the desktop topology changed. Refreshing here used to dismiss an
+        // active blackout spuriously. Real topology changes are handled by
+        // WM_DISPLAYCHANGE, while selectedHealthy() independently catches a
+        // stale/removed selected monitor on every polling tick and the retry
+        // path discovers a reconnected monitor.
         return TRUE;
     case WM_POWERBROADCAST:
         if (wp == PBT_APMSUSPEND) { suspended_ = true; reset("system suspending"); }
